@@ -66,6 +66,7 @@ if($_POST['section']=="dialplan"){
 			$xmlw -> dp_action('hash','insert/${domain_name}-spymap/${caller_id_number}/${uuid}');
 			$xmlw -> dp_action('hash','insert/${domain_name}-last_dial/${caller_id_number}/${destination_number}');
 			$xmlw -> dp_action('hash','insert/${domain_name}-last_dial/global/${uuid}');
+			$xmlw -> dp_set('RFC2822_DATE','${strftime(%a, %d %b %Y %T %z)}');
 		$xmlw -> endElement();//</condition>
 		$xmlw -> endElement();//</extension>
 
@@ -96,6 +97,7 @@ if($_POST['section']=="dialplan"){
 				//$xmlw -> dp_application	('bind_meta_app','2 b s record_session::$${base_dir}/recordings/${caller_id_number}.${strftime(%Y-%m-%d-%H-%M-%S)}.wav');
 				$xmlw -> dp_application	('bind_meta_app','2 b s record_session::$${recordings_dir}/${caller_id_number}.${strftime(%Y-%m-%d-%H-%M-%S)}.wav');
 				$xmlw -> dp_application	('bind_meta_app','3 b s execute_extension::cf XML features');
+				$xmlw -> dp_application	('bind_meta_app','4 b s execute_extension::att_xfer XML features');
 				$xmlw -> dp_set			('ringback','${us-ring}');
 				$xmlw -> dp_set			('transfer_ringback','$${hold_music}');
 				$xmlw -> dp_set			('call_timeout',(($_POST['variable_user_voicemail']=='false') ? '45' : '30'));
@@ -103,17 +105,22 @@ if($_POST['section']=="dialplan"){
 				$xmlw -> dp_action_hangup_after_bridge();
 				//$xmlw -> dp_set			('continue_on_fail','NORMAL_TEMPORARY_FAILURE,USER_BUSY,NO_ANSWER,TIMEOUT,NO_ROUTE_DESTINATION');
 				$xmlw -> dp_set			('continue_on_fail','true');
+
 				$xmlw -> dp_action('hash','insert/${domain_name}-call_return/${dialed_extension}/${caller_id_number}');
 				$xmlw -> dp_action('hash','insert/${domain_name}-last_dial_ext/${dialed_extension}/${uuid}');
+				$xmlw -> dp_action('hash','insert/${domain_name}-last_dial_ext/${called_party_callgroup}/${uuid}');
+				$xmlw -> dp_action('hash','insert/${domain_name}-last_dial_ext/global/${uuid}');
 				$xmlw -> dp_set	  ('called_party_callgroup','${user_data(${dialed_extension}@${domain_name} var callgroup)}');
 				//$xmlw -> dp_action('export', 'nolocal:sip_secure_media=${user_data(${dialed_extension}@${domain_name} var sip_secure_media)}');
-				$xmlw -> dp_action('hash','insert/${domain_name}-last_dial/${called_party_callgroup}/${uuid}');
+				$xmlw -> dp_action('hash','insert/${domain_name}-last_dial/${called_party_callgroup}/${uuid}');	
+
+
 				
 				$xmlw -> dp_action('hash','');
 				$xmlw -> dp_action_bridge('user/${dialed_extension}@${domain_name}');
 				if(!isset($_POST['variable_user_voicemail']) || $_POST['variable_user_voicemail']!='false'){//when we should actually do voicemail
 					$xmlw -> dp_action('answer');
-					$xmlw -> dp_action('info');//why?
+					//$xmlw -> dp_action('info');//why?
 					$xmlw -> dp_action('sleep',1000);
 					$xmlw -> dp_action('voicemail','default ${domain_name} ${dialed_extension}');
 					}
@@ -230,7 +237,8 @@ if($_POST['section']=="dialplan"){
 				}//end is a kosher number
 
 			$xmlw->dp_set('bypass_media','true');// BYPASS MEDIA!
-
+				//$xmlw -> dp_set			('continue_on_fail','NORMAL_TEMPORARY_FAILURE,USER_BUSY,NO_ANSWER,TIMEOUT,NO_ROUTE_DESTINATION');
+				//$xmlw -> dp_set			('continue_on_fail','true');
 			if($cordia && $xmlw->cordia($number))	{	//$info=$xmlw->cordia_lookup;
 				$xmlw->dp_log("NOTICE Account has cordia, using unlimited trunk.");
 				$xmlw -> dp_action_bridge_gateway('cordia-global-'.$cordia_account,$number);	$do++;

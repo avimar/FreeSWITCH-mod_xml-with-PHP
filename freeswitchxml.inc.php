@@ -25,12 +25,13 @@ class Freeswitchxml extends XMLWriter {
 
 		return $number;
 		}
-	function expand_digits($number,$mysql=1){
+	function expand_digits($number){
+		GLOBAL $mysql;
 		$count=strlen($number);
 		$expanded="(";
 		for($i=0;$i<$count;$i++){
-			if($mysql)	$expanded.="'".substr($number,0,$count-$i)."',";
-			else 		$expanded.=    substr($number,0,$count-$i). ",";
+			if(isset($mysql) && $mysql)	$expanded.="'".substr($number,0,$count-$i)."',";
+			else 						$expanded.=    substr($number,0,$count-$i). ",";
 			}
 		return substr($expanded, 0, -1).")";
 		}
@@ -50,7 +51,7 @@ class Freeswitchxml extends XMLWriter {
 	function cordia($number){
 		GLOBAL $db;
 		$sql ='SELECT l.digits AS lcr_digits, l.rate AS lcr_rate_field, l.name as lcr_destination ';
-		$sql.='FROM lcr l WHERE l.carrier_id=8 AND digits IN '.$this->expand_digits($number,1).' ORDER BY digits DESC, rate limit 1';
+		$sql.='FROM lcr l WHERE l.carrier_id=8 AND digits IN '.$this->expand_digits($number).' ORDER BY digits DESC, rate limit 1';
 		$cordia_free=$db->query($sql);//only has USA because I added "1"!!!
 		if($db->num_rows($cordia_free)) {
 			$this->cordia_lookup=$db->fetch_assoc($cordia_free);
@@ -66,7 +67,7 @@ class Freeswitchxml extends XMLWriter {
 				$sql ="SELECT l.digits AS lcr_digits, c.carrier_name AS lcr_carrier_name, l.$rate_field AS lcr_rate_field, c.minimum as nibble_minimum, c.increment as nibble_increment, ";
 				$sql.="c.prefix AS lcr_gw_prefix, c.suffix AS lcr_gw_suffix, l.name as lcr_rate_name FROM lcr l JOIN carriers c ON l.carrier_id=c.id WHERE c.enabled = 1 AND digits IN ";
 				//AND l.enabled = '1'  - i haven't turned off individual lcr table fields.
-				$sql.=$this->expand_digits($lcr_number,1)." AND lcr_profile=1 ORDER BY digits DESC, $rate_field;";//AND CURRENT_TIMESTAMP BETWEEN date_start AND date_end  // ,rand()
+				$sql.=$this->expand_digits($lcr_number)." AND lcr_profile=1 ORDER BY digits DESC, $rate_field;";//AND CURRENT_TIMESTAMP BETWEEN date_start AND date_end  // ,rand()
 				//$this->dp_log('DEBUG LCR Query: '.$sql);
 				$result=$db->query($sql);
 
