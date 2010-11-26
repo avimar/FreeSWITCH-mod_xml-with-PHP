@@ -78,14 +78,6 @@ function print_r_html($a){
 	echo "</pre>";	
 	}
 
-		$dbtype = 'mysql'; 
-		$dbhost = '127.0.0.1';
-		$dbname = '';
-		$dbusername = '';
-		$dbpassword = '';
-		$db=NEW db;
-		$db->connect($dbhost,$dbusername,$dbpassword);
-		$db->select_db($dbname);
-
+include("my_xml_config.php");
 
 ?>
