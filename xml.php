@@ -1,4 +1,5 @@
 <?php
+$time5 = microtime(true);
 require "db.php";
 require "freeswitchxml.inc.php";
 
@@ -60,7 +61,7 @@ if($_POST['section']=="dialplan"){
 
 		$xmlw -> start_extension("global_curl",1);//duplicate the standard stuff in the default.xml file.
 		$xmlw -> startElement('condition');//no attributes means it always triggers
-			if($_POST['variable_call_debug']=="true") $xmlw -> dp_action('info');
+			if(isset($_POST['variable_call_debug']) && $_POST['variable_call_debug']=="true") $xmlw -> dp_action('info');
 			$xmlw -> dp_action('hash','insert/${domain_name}-spymap/${caller_id_number}/${uuid}');
 			$xmlw -> dp_action('hash','insert/${domain_name}-last_dial/${caller_id_number}/${destination_number}');
 			$xmlw -> dp_action('hash','insert/${domain_name}-last_dial/global/${uuid}');
@@ -180,20 +181,29 @@ if($_POST['section']=="dialplan"){
 			$time = microtime(true);
 			//if 1, and a valid number, and not canada or carribeans, do LRN. Also, see if intra-state or not.
 			if($country==1 && preg_match('~^1([2-9]\d\d[2-9]\d{6})$~',$number) && !preg_match('~^1('.$area_codes['canada'].'|'.$area_codes['non-usa'].')(\d{7})$~',$number)){ //not non-usa nanpa
-				$sql="select new_npa,new_nxx from a_lrn where digits=$number";
+
+
+				$sql = ($cfg['lrn']['expire']>0) ? ",if(date_add(date_lrn,interval ".intval($cfg['lrn']['expire'])." day)<NOW(),1,0) as old" : "";
+				$sql="select new_npa,new_nxx,date_lrn $sql from a_lrn where digits=$number";
+				//echo "<Br>".$sql."<br>";//die();
 				$result=$db->query($sql);
 				if($db->num_rows($result)){
 					$result=$db->fetch_assoc($result);
-					$new_npa=$result['new_npa'];
-					$new_nxx=$result['new_nxx'];
-					$xmlw->dp_log("DEBUG LCR: LRN relocated from $number to 1".$new_npa.$new_nxx."0000");
-					$lcr_number="1".$new_npa.$new_nxx."0000";
-					}
-				else $lcr_number=$number;//no LRN result
+					//echo "<Br>".print_r($result)."<br>";die();
+					if(isset($result['old']) && $result['old']) $lcr_number=$xmlw->lrn_lookup_api($number,1);// it's too old.
+					elseif($result['new_npa']>0 && $result['new_nxx']>0) {
+						$new_npa=$result['new_npa'];
+						$new_nxx=$result['new_nxx'];
+						$xmlw->dp_log("DEBUG LCR: LRN relocated from $number to 1".$new_npa.$new_nxx."0000 (via DB)");
+						$lcr_number="1".$new_npa.$new_nxx."0000";
+						}//end has a result of a new LRN.
+					else $xmlw->dp_log("DEBUG LCR: LRN for $number has not changed. (via db)");
+					}//echo has a result.
+				else $lcr_number=$xmlw->lrn_lookup_api($number,0);
 
 				//Which rate? IN USA!
 				if(preg_match('~^1([2-9]\d\d)([2-9]\d{2})\d{4}$~',$number,$lcr_callee) && preg_match('~^1([2-9]\d\d)([2-9]\d{2})\d{4}$~',$_POST['variable_effective_caller_id_number'],$lcr_caller)){
-					if(strlen($new_npa)) {$lcr_callee[1]=$new_npa;$lcr_callee[2]=$new_nxx;}
+					if(isset($new_npa) && $new_npa>0) {$lcr_callee[1]=$new_npa;$lcr_callee[2]=$new_nxx;}
 					$sql="SELECT 'state', count(DISTINCT state) FROM npa_nxx_company_ocn WHERE (npa={$lcr_callee[1]} AND nxx={$lcr_callee[2]}) OR (npa={$lcr_caller[1]} AND nxx={$lcr_caller[2]})
 						UNION SELECT 'lata', count(DISTINCT lata) FROM npa_nxx_company_ocn WHERE (npa={$lcr_callee[1]} AND nxx={$lcr_callee[2]}) OR (npa={$lcr_caller[1]} AND nxx={$lcr_caller[2]})";
 					$result=$db->query($sql);$list1=$db->fetch_array($result); $list2=$db->fetch_array($result);
@@ -212,6 +222,7 @@ if($_POST['section']=="dialplan"){
 				$rate_field="rate";//not USA
 				$xmlw->dp_log("DEBUG LCR: Not USA, so using 'rate'");
 				}
+
 
 
 			$lcr=$xmlw->lcr($number,$lcr_number,$rate_field);
@@ -291,6 +302,6 @@ if($do==0)$xmlw->noresult();
 //</document>
 $xmlw -> endElement();
 
-if($_GET['debug']) echo "<html><body><pre>".wordwrap(htmlentities($xmlw -> outputMemory()),200,"\n",1)."</pre></body></html>";
+if($_GET['debug']) echo "<html><body><pre>".wordwrap(htmlentities($xmlw -> outputMemory()),200,"\n",1).htmlentities("<!--Time elapsed: ".(microtime(true)-$time5). " seconds-->")."</pre></body></html>";
 else echo $xmlw -> outputMemory();
 ?>
