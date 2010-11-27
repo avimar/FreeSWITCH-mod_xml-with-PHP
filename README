@@ -66,3 +66,44 @@ usa/israel, uk is to convert "local" dialing from each region into the full stri
 
 
 
+
+SCHEMAS for MySQL
+
+a_lrn for lrn tracking:
+
+CREATE TABLE IF NOT EXISTS `a_lrn` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `digits` bigint(11) unsigned NOT NULL,
+  `new_npa` smallint(6) NOT NULL,
+  `new_nxx` smallint(6) NOT NULL,
+  `date_lrn` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+   PRIMARY KEY (`id`)
+) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=0 ;
+
+
+
+a_did for incoming DID routing - use an extension number or prefix with sip:
+
+CREATE TABLE IF NOT EXISTS `a_did` (
+  `did_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `number` bigint(20) unsigned NOT NULL,
+  `route` varchar(200) NOT NULL,
+  PRIMARY KEY (`did_id`),
+  UNIQUE KEY `number` (`number`)
+) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=0 ;
+
+mod_lcr is mostly standard. Except:
+1) I'm not querying most of the columns because I have no use for them.
+2) I added tinyint for minimum and increment to "carriers", and moved the gateway there because I only have on for each.
+So the table looks like:
+
+CREATE TABLE IF NOT EXISTS `carriers` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `carrier_name` varchar(255) DEFAULT NULL,
+  `enabled` tinyint(1) NOT NULL DEFAULT '1',
+  `minimum` tinyint(3) unsigned NOT NULL,
+  `increment` tinyint(3) unsigned NOT NULL,
+  `prefix` varchar(100) NOT NULL,
+  `suffix` varchar(100) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=0 ;
