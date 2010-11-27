@@ -59,10 +59,8 @@ if($_POST['section']=="dialplan"){
 
 
 		$xmlw -> start_extension("global_curl",1);//duplicate the standard stuff in the default.xml file.
-		$xmlw -> startElement('condition');$xmlw -> writeAttribute('field', '${call_debug}');$xmlw -> writeAttribute('expression', '^true$');$xmlw -> writeAttribute('break', 'never');
-			$xmlw -> dp_action('info');
-		$xmlw -> endElement();//</condition>
 		$xmlw -> startElement('condition');//no attributes means it always triggers
+			if($_POST['variable_call_debug']=="true") $xmlw -> dp_action('info');
 			$xmlw -> dp_action('hash','insert/${domain_name}-spymap/${caller_id_number}/${uuid}');
 			$xmlw -> dp_action('hash','insert/${domain_name}-last_dial/${caller_id_number}/${destination_number}');
 			$xmlw -> dp_action('hash','insert/${domain_name}-last_dial/global/${uuid}');
@@ -91,13 +89,13 @@ if($_POST['section']=="dialplan"){
 			$xmlw -> start_extension("Local_Extension_curl");
 			$xmlw -> startElement('condition');
 				$xmlw -> dp_set			('dialed_extension',$number);
-				$xmlw -> dp_application	('export',"dialed_extension=$number");
+				$xmlw -> dp_action	('export',"dialed_extension=$number");
 				//<!-- bind_meta_app can have these args <key> [a|b|ab] [a|b|o|s] <app> -->
-				$xmlw -> dp_application	('bind_meta_app','1 b s execute_extension::dx XML features');
-				//$xmlw -> dp_application	('bind_meta_app','2 b s record_session::$${base_dir}/recordings/${caller_id_number}.${strftime(%Y-%m-%d-%H-%M-%S)}.wav');
-				$xmlw -> dp_application	('bind_meta_app','2 b s record_session::$${recordings_dir}/${caller_id_number}.${strftime(%Y-%m-%d-%H-%M-%S)}.wav');
-				$xmlw -> dp_application	('bind_meta_app','3 b s execute_extension::cf XML features');
-				$xmlw -> dp_application	('bind_meta_app','4 b s execute_extension::att_xfer XML features');
+				$xmlw -> dp_action	('bind_meta_app','1 b s execute_extension::dx XML features');
+				//$xmlw -> dp_action	('bind_meta_app','2 b s record_session::$${base_dir}/recordings/${caller_id_number}.${strftime(%Y-%m-%d-%H-%M-%S)}.wav');
+				$xmlw -> dp_action	('bind_meta_app','2 b s record_session::$${recordings_dir}/${caller_id_number}.${strftime(%Y-%m-%d-%H-%M-%S)}.wav');
+				$xmlw -> dp_action	('bind_meta_app','3 b s execute_extension::cf XML features');
+				$xmlw -> dp_action	('bind_meta_app','4 b s execute_extension::att_xfer XML features');
 				$xmlw -> dp_set			('ringback','${us-ring}');
 				$xmlw -> dp_set			('transfer_ringback','$${hold_music}');
 				$xmlw -> dp_set			('call_timeout',(($_POST['variable_user_voicemail']=='false') ? '45' : '30'));
